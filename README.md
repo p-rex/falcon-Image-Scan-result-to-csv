@@ -3,6 +3,11 @@ Fetch image scan results and save it as CSV.
 The csv includes package name.
 
 # Usage
+Create an API client in Falcon console with the following scope.
+```
+Falcon Container Image: Read
+```
+
 Set environmental variables. 
 ```bash
 export FALCON_CLIENT_ID=XXXXX

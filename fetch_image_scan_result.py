@@ -1,4 +1,4 @@
-from falconpy import ContainerImages, ContainerPackages
+from falconpy import ContainerImages, ContainerPackages, ContainerVulnerabilities
 import os
 import pandas as pd
 import datetime
@@ -14,7 +14,8 @@ def getResources(resource_fetcher, offset_cnt=0, show_progress=True):
     while offset_cnt < total_cnt:
         resp = resource_fetcher(offset_cnt)
         if resp['status_code'] != 200:
-            exit('Error: API failed')
+            showMsg('API failed', 'error')
+            continue
 
         resources.extend(resp['body']['resources'])
         total_cnt = resp['body']['meta']['pagination']['total']
@@ -26,7 +27,9 @@ def getResources(resource_fetcher, offset_cnt=0, show_progress=True):
     
     return resources
 
+
 def getImageList(falcon_client_id, falcon_client_secret):
+    # https://falconpy.io/Service-Collections/Container-Images.html#getcombinedimages
     falcon = ContainerImages(client_id=falcon_client_id, client_secret=falcon_client_secret)
 
     def fetchImages(offset_cnt):
@@ -34,7 +37,10 @@ def getImageList(falcon_client_id, falcon_client_secret):
 
     return getResources(fetchImages)
 
+
+
 def getPackageList(falcon_client_id, falcon_client_secret, digest):
+    # https://falconpy.io/Service-Collections/Container-Packages.html#readpackagescombined
     falcon = ContainerPackages(client_id=falcon_client_id, client_secret=falcon_client_secret)
     
     def fetchPackages(offset_cnt):
@@ -42,18 +48,30 @@ def getPackageList(falcon_client_id, falcon_client_secret, digest):
         return falcon.read_combined(
             filter=filter_fql,
             only_zero_day_affected=False,
-            offset=offset_cnt
+            offset=offset_cnt,
+            sort='package_name_version'
         )
     
     return getResources(fetchPackages, show_progress=False)
 
 
 
+def getVulnerabilityList(falcon_client_id, falcon_client_secret):
+    # https://falconpy.io/Service-Collections/Container-Vulnerabilities.html#readcombinedvulnerabilities
+    falcon = ContainerVulnerabilities(client_id=falcon_client_id, client_secret=falcon_client_secret)
+    
+    def fetchVulnerabilities(offset_cnt):
+        return falcon.read_combined_vulnerabilities(offset=offset_cnt, sort='cve_id')
+
+    return getResources(fetchVulnerabilities)
+
+
 
 def showProgress(current, total):
-    if(total < current):
-        current = total
-    print(f"Progress: {current}/{total}", end='\r')
+    if(current >= total):
+        print(f"Progress: {total}/{total}")
+    else:
+        print(f"Progress: {current}/{total}", end='\r')
 
 def showMsg(msg, category='primary'):
     if(category == 'primary'):
@@ -61,6 +79,8 @@ def showMsg(msg, category='primary'):
         print(f'=== {msg} ===')
     if(category == 'secondary'):
         print(msg)
+    if(category == 'error'):
+        print(f'Error: {msg}')
 
 def writeToCSV(data, filename):
     df = pd.json_normalize(data)
@@ -80,7 +100,6 @@ showMsg('Get Image list via API')
 image_list = getImageList(falcon_client_id, falcon_client_secret)
 
 
-
 showMsg('Extract Vlulnerable Image digest')
 vulnerable_image_digests = []
 for image in image_list:
@@ -93,15 +112,30 @@ vulnerable_image_digests_cnt = len(vulnerable_image_digests)
 showMsg('Number of unique vulnerable image digest:' + str(vulnerable_image_digests_cnt), 'secondary')
 
 
-showMsg('Get package info via API')
+showMsg('Get package list via API')
 package_dict = {}
 for i, image_digest in enumerate(vulnerable_image_digests):
     showProgress(i+1, vulnerable_image_digests_cnt)
     package_dict[image_digest] =  getPackageList(falcon_client_id, falcon_client_secret, image_digest)
 
 
+showMsg('Get Vulnerability list via API')
+vulnerability_list = getVulnerabilityList(falcon_client_id, falcon_client_secret)
+showMsg('Change vulnerability list format', 'secondary')
+# Add cveid to the dictionary key for easier processing when creating CSV 
+# before
+#  [{'cve_id': 'CVE-2022-2222', 'severity': 'Low'}, {'cve_id': 'CVE-2020-1111', 'severity': 'High'} ]
+# after
+#  {'CVE-2022-2222': {'cve_id': 'CVE-2022-2222', 'severity': 'Low'}, 'CVE-2020-1111': {'cve_id': 'CVE-2020-1111', 'severity': 'High'}}
+vulnerability_list_cveid = {}
+for items in vulnerability_list:
+    vulnerability_list_cveid[items['cve_id']] = items
 
-showMsg('Merge image and package info')
+del vulnerability_list
+
+
+
+showMsg('Merge data')
 vuln_all = []
 for image in image_list:
 
@@ -127,6 +161,17 @@ for image in image_list:
             vuln_line['package_name_version'] = package['package_name_version']
             vuln_line['cveid'] = vul['cveid']
             vuln_line['severity']  = vul['severity']
+
+            #from vulnerabilities
+            v_dict = vulnerability_list_cveid.get(vul['cveid'])
+            if v_dict is None:
+                showMsg(f'{vul["cveid"]} is not found in Vulnerability list', 'error')
+            else:
+                vuln_line['cvss_score']  = v_dict['cvss_score']
+                vuln_line['exploited_status_string']  = v_dict['exploited_status_string']
+                vuln_line['exprt_rating']  = v_dict['cps_current_rating']
+
+            #from packages
             vuln_line['description']  = vul['description'] 
             vuln_line['fix_resolution']  = vul['fix_resolution'] #IMCL This type is list. multiple resolution may exist
 

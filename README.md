@@ -12,6 +12,7 @@ Set environmental variables.
 ```bash
 export FALCON_CLIENT_ID=XXXXX
 export FALCON_CLIENT_SECRET=YYYYY
+export FALCON_SSL_VERIFY=True or False
 ```
 
 Execute.

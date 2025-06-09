@@ -28,9 +28,9 @@ def getResources(resource_fetcher, offset_cnt=0, show_progress=True):
     return resources
 
 
-def getImageList(falcon_client_id, falcon_client_secret):
+def getImageList(falcon_client_id, falcon_client_secret, falcon_ssl_verify):
     # https://falconpy.io/Service-Collections/Container-Images.html#getcombinedimages
-    falcon = ContainerImages(client_id=falcon_client_id, client_secret=falcon_client_secret)
+    falcon = ContainerImages(client_id=falcon_client_id, client_secret=falcon_client_secret, ssl_verify=falcon_ssl_verify)
 
     def fetchImages(offset_cnt):
         return falcon.get_combined_images(offset=offset_cnt, sort="first_seen")
@@ -39,9 +39,9 @@ def getImageList(falcon_client_id, falcon_client_secret):
 
 
 
-def getPackageList(falcon_client_id, falcon_client_secret, digest):
+def getPackageList(falcon_client_id, falcon_client_secret, falcon_ssl_verify, digest):
     # https://falconpy.io/Service-Collections/Container-Packages.html#readpackagescombined
-    falcon = ContainerPackages(client_id=falcon_client_id, client_secret=falcon_client_secret)
+    falcon = ContainerPackages(client_id=falcon_client_id, client_secret=falcon_client_secret, ssl_verify=falcon_ssl_verify)
     
     def fetchPackages(offset_cnt):
         filter_fql = f"image_digest:'{digest}'"
@@ -56,9 +56,9 @@ def getPackageList(falcon_client_id, falcon_client_secret, digest):
 
 
 
-def getVulnerabilityList(falcon_client_id, falcon_client_secret):
+def getVulnerabilityList(falcon_client_id, falcon_client_secret, falcon_ssl_verify):
     # https://falconpy.io/Service-Collections/Container-Vulnerabilities.html#readcombinedvulnerabilities
-    falcon = ContainerVulnerabilities(client_id=falcon_client_id, client_secret=falcon_client_secret)
+    falcon = ContainerVulnerabilities(client_id=falcon_client_id, client_secret=falcon_client_secret, ssl_verify=falcon_ssl_verify)
     
     def fetchVulnerabilities(offset_cnt):
         return falcon.read_combined_vulnerabilities(offset=offset_cnt, sort='cve_id')
@@ -94,10 +94,11 @@ def writeToCSV(data, filename):
 #Set API Credential
 falcon_client_id = os.environ['FALCON_CLIENT_ID']
 falcon_client_secret = os.environ['FALCON_CLIENT_SECRET']
+falcon_ssl_verify = os.environ['FALCON_SSL_VERIFY']
 
 
 showMsg('Get Image list via API')
-image_list = getImageList(falcon_client_id, falcon_client_secret)
+image_list = getImageList(falcon_client_id, falcon_client_secret, falcon_ssl_verify)
 
 
 showMsg('Extract Vlulnerable Image digest')
@@ -116,11 +117,11 @@ showMsg('Get package list via API')
 package_dict = {}
 for i, image_digest in enumerate(vulnerable_image_digests):
     showProgress(i+1, vulnerable_image_digests_cnt)
-    package_dict[image_digest] =  getPackageList(falcon_client_id, falcon_client_secret, image_digest)
+    package_dict[image_digest] =  getPackageList(falcon_client_id, falcon_client_secret, falcon_ssl_verify, image_digest)
 
 
 showMsg('Get Vulnerability list via API')
-vulnerability_list = getVulnerabilityList(falcon_client_id, falcon_client_secret)
+vulnerability_list = getVulnerabilityList(falcon_client_id, falcon_client_secret, falcon_ssl_verify)
 showMsg('Change vulnerability list format', 'secondary')
 # Add cveid to the dictionary key for easier processing when creating CSV 
 # before

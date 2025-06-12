@@ -17,7 +17,7 @@ export FALCON_SSL_VERIFY=True or False
 
 3. Execute.
 
-old version.
+Old version.
 ```bash
 curl -s https://raw.githubusercontent.com/p-rex/falcon-Image-Scan-result-to-csv/main/fetch_image_scan_result.py | python
 ```

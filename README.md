@@ -3,21 +3,28 @@ This script fetchs image scan results via API and save it locally as CSV.
 
 
 ## Usage
-Create an API client in the Falcon console with the following scope.
+1. Create an API client in the Falcon console with the following scope.
 ```
 Falcon Container Image: Read
 ```
 
-Set environmental variables. 
+2. Set environmental variables. 
 ```bash
 export FALCON_CLIENT_ID=XXXXX
 export FALCON_CLIENT_SECRET=YYYYY
 export FALCON_SSL_VERIFY=True or False
 ```
 
-Execute.
+3. Execute.
+
+old version.
 ```bash
 curl -s https://raw.githubusercontent.com/p-rex/falcon-Image-Scan-result-to-csv/main/fetch_image_scan_result.py | python
+```
+
+Use v2 if you have more than 10K images.
+```bash
+curl -s https://raw.githubusercontent.com/p-rex/falcon-Image-Scan-result-to-csv/main/fetch_image_scan_result_v2.py | python
 ```
   
 CSV will be created in the working dir.

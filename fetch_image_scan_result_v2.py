@@ -49,7 +49,8 @@ class ExportAPI:
         return self.getJobResult()
 
     def  getJobResult(self):
-        showMsg("Export job is created", 'secondary')
+        if self.chkStatusCode() == True:
+            showMsg("Export job is created", 'secondary')
         job_id = self.resp['body']['resources'][0]
 
         while True:
@@ -70,6 +71,14 @@ class ExportAPI:
 
         # Convert from json string to python dictionary
         return json.loads(json_str)
+    
+    def chkStatusCode(self):
+        if self.resp['status_code'] != 200:
+            pprint.pprint(self.resp)
+            showMsg('API failed', 'error')
+            exit()
+        return True
+
 
 
 ##---------------------------------------------------

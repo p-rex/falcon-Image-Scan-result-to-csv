@@ -164,7 +164,7 @@ def writeToCSV(data, filename):
 #Set API Credential
 falcon_client_id = os.environ['FALCON_CLIENT_ID']
 falcon_client_secret = os.environ['FALCON_CLIENT_SECRET']
-falcon_ssl_verify = os.environ['FALCON_SSL_VERIFY']
+falcon_ssl_verify = os.environ.get('FALCON_SSL_VERIFY', 'True').lower() == 'true' # Set True if no env var
 
 
 showMsg('Get Image List - Export API')

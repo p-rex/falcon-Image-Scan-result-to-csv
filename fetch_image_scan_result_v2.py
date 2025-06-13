@@ -9,7 +9,7 @@ import pprint
 ##---------------------------------------------------
 ## Global Vars
 ##---------------------------------------------------
-EXPORT_JOB_CHECK_INTERVAL = 5
+JOB_CHECK_INTERVAL = 5
 
 
 ##---------------------------------------------------
@@ -23,8 +23,7 @@ class ExportAPI:
             self, 
             client_id: str, 
             client_secret: str, 
-            ssl_verify: bool = True,
-            export_job_check_interval: int = EXPORT_JOB_CHECK_INTERVAL
+            ssl_verify: bool = True
         ):
 
         self.falcon = FalconContainer(client_id=falcon_client_id, client_secret=falcon_client_secret, ssl_verify=falcon_ssl_verify)
@@ -62,7 +61,7 @@ class ExportAPI:
                 break
 
             showMsg("Export job is in progress", 'secondary')
-            time.sleep(EXPORT_JOB_CHECK_INTERVAL)
+            time.sleep(JOB_CHECK_INTERVAL)
 
         resp = self.falcon.DownloadExportFile(id=job_id)
 
@@ -173,26 +172,25 @@ eapi = ExportAPI(falcon_client_id, falcon_client_secret, falcon_ssl_verify)
 image_list = eapi.getImageList()
 
 
-# This is used for vulnerable image digest. 
+# This information is used to extract the image digest of the vulnerable images
+# Since this does not include detailed information (such as exploit status), the vulnerability list will be obtained later using the normal API
 showMsg('Get All vulnerabilities - Export API')
 vuln_expanded_list = eapi.getVuln()
 
-showMsg('Remove overwrapped Image digest')
+# Extract the image digest of the vulnerable image 
 vuln_expanded_list = getUniqueVulnExpandedList(vuln_expanded_list)
-
-
 vulnerable_image_digests_cnt = len(vuln_expanded_list)
 showMsg('Number of unique vulnerable image digest:' + str(vulnerable_image_digests_cnt), 'secondary')
 
 
-showMsg('Get package list via API')
+showMsg('Get package list - normal API')
 package_dict = {}
 for i, image_digest in enumerate(vuln_expanded_list.keys()):
     showProgress(i+1, vulnerable_image_digests_cnt)
     package_dict[image_digest] =  getPackageList(falcon_client_id, falcon_client_secret, falcon_ssl_verify, image_digest)
 
 
-showMsg('Get Vulnerability list via API')
+showMsg('Get Vulnerability list - normal API')
 vulnerability_list = getVulnerabilityList(falcon_client_id, falcon_client_secret, falcon_ssl_verify)
 showMsg('Change vulnerability list format', 'secondary')
 # Add cveid to the dictionary key for easier processing when creating CSV 
@@ -214,6 +212,7 @@ vuln_all = []
 for image in image_list:
     image_digest = image['Image digest']
 
+    # skip if there is no vulnerabilities
     if image_digest not in vuln_expanded_list.keys():
         continue
 

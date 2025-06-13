@@ -179,6 +179,7 @@ falcon_ssl_verify = os.environ.get('FALCON_SSL_VERIFY', 'True').lower() == 'true
 showMsg('Get Image List - Export API')
 eapi = ExportAPI(falcon_client_id, falcon_client_secret, falcon_ssl_verify)
 image_list = eapi.getImageList()
+showMsg('Number of images:' + str(len(image_list)), 'secondary')
 
 
 # This information is used to extract the image digest of the vulnerable images
